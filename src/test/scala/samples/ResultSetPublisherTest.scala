@@ -18,14 +18,14 @@ class ResultSetPublisherTest(env: TestEnvironment, publisherShutdownTimeout: Lon
   override def createPublisher(elements: Long): Publisher[Row] = {
     new RowPublisher {
       import scalikejdbc._
-      override def sql = sql"select id, title, body from article"
+      override def sql = sql"select id, title, body from article limit 30"
     }
   }
 
   override def createErrorStatePublisher(): Publisher[Row] = {
     new RowPublisher {
       import scalikejdbc._
-      override def sql = sql"select id, title, body from article"
+      override def sql = sql"select id, title, body from article limit 30"
       override def subscribe(subscriber: Subscriber[_ >: Row]): Unit = {
         super.subscribe(subscriber)
         subscriber.onError(new RuntimeException)
@@ -33,7 +33,7 @@ class ResultSetPublisherTest(env: TestEnvironment, publisherShutdownTimeout: Lon
     }
   }
 
-  override def maxElementsFromPublisher = 10
-  override def boundedDepthOfOnNextAndRequestRecursion = 1
+  override def maxElementsFromPublisher = 2
+  override def boundedDepthOfOnNextAndRequestRecursion = 2
 
 }

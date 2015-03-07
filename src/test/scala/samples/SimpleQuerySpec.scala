@@ -27,7 +27,7 @@ class SimpleQuerySpec extends FunSpec with Matchers with DatabaseInitializer {
     it("works") {
       val publisher: Publisher[Row] = new RowPublisher {
         import scalikejdbc._
-        override def sql = sql"select id, title, body from article order by id"
+        override def sql = sql"select id, title, body from article order by id limit 50"
       }
       val onNextCount = new AtomicInteger(0)
       publisher.subscribe(new RowSubscriber {
