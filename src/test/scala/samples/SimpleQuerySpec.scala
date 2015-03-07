@@ -1,48 +1,44 @@
 package samples
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import org.scalatest._
 import org.slf4j.LoggerFactory
-import scalikejdbc._
 import org.reactivestreams._
 import org.reactivestreams.jdbc._
 
-class SimpleQuerySpec extends FunSpec with Matchers {
+class SimpleQuerySpec extends FunSpec with Matchers with DatabaseInitializer {
+
+  prepareArticleTableIfAbsent
 
   val logger = LoggerFactory.getLogger(getClass)
 
-  Class.forName("org.h2.Driver")
-  ConnectionPool.singleton("jdbc:h2:mem:simple;MODE=PostgreSQL", "user", "pass")
-  GlobalSettings.loggingSQLAndTime = LoggingSQLAndTimeSettings(enabled = false)
-
-  def prepareArticleTable(): Unit = {
-    DB.autoCommit { implicit s =>
-      sql"create table article (id serial not null primary key, title varchar(100) not null, body text)".execute.apply()
-      (1 to 100).foreach { no =>
-        val title = s"Lesson $no"
-        sql"insert into article (title) values ($title)".update.apply()
-      }
-    }
-  }
-
   case class Article(id: Int, title: String, body: Option[String] = None)
+
   object Article {
-    def apply(rs: ResultSet): Article = new Article(rs.get("id"), rs.get("title"), rs.get("body"))
+    def apply(row: Row): Article = new Article(
+      id = row.get("ID").map(_.toString.toInt).get,
+      title = row.get("TITLE").map(_.toString).get,
+      body = row.get("BODY").map(_.toString)
+    )
   }
 
-  describe("Simple Query") {
+  describe("Simple query example") {
     it("works") {
-      prepareArticleTable()
-
-      val publisher: Publisher[ResultSet] = new ResultSetPublisher {
+      val publisher: Publisher[Row] = new RowPublisher {
+        import scalikejdbc._
         override def sql = sql"select id, title, body from article order by id"
       }
-      publisher.subscribe(new ResultSetSubscriber {
-        override def onNext(rs: ResultSet) = {
+      val onNextCount = new AtomicInteger(0)
+      publisher.subscribe(new RowSubscriber {
+        override def onNext(row: Row) = {
+          onNextCount.incrementAndGet
           // do something with ResultSet here
-          logger.info(s"onNext: ${Article(rs)}")
+          logger.info(s"onNext: ${Article(row)}")
         }
       })
-
+      Thread.sleep(500L)
+      onNextCount.get() should be > (0)
     }
   }
 

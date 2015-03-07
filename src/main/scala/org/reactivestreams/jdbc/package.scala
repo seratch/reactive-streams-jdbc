@@ -2,6 +2,6 @@ package org.reactivestreams
 
 package object jdbc {
 
-  type ResultSet = scalikejdbc.WrappedResultSet
+  type Row = Map[String, Any]
 
 }
